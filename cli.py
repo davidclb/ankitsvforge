@@ -160,11 +160,16 @@ def main():
     nb_changes = run_dryrun(notes, label_dryrun)
 
     if args.apply:
+        # The model is source of truth for presentation, so it converges on every
+        # apply — before, and independently of, any content change. Otherwise a
+        # collection already in sync (0 create, 0 update) would exit below and
+        # never pick up a new field, CSS or template.
+        create_model_fn(model)
+
         if nb_changes == 0:
             logging.info("Nothing to apply.")
             return
         reponse = input("Apply these changes? [y/N] ").strip().lower()
         if reponse in ("y", "yes", "o", "oui"):
-            create_model_fn(model)
             create_deck(deck)
             run_import(notes, add_fn, deck, model, label_run_error)

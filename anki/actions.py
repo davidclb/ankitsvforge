@@ -161,6 +161,20 @@ def make_template(pronom: str) -> dict:
     }
 
 
+def ensure_fields(modelName: str, inOrderFields: list):
+    """Add fields declared in INORDERFIELDS_* but missing from an existing model.
+
+    createModel only applies to a model being created, so a field added to the
+    lists later would never reach models already living in the collection.
+    Additive only: a field removed from the list is never dropped here, because
+    deleting a field would destroy whatever the user typed in it."""
+    existing = invoke("modelFieldNames", modelName=modelName)
+    for field in inOrderFields:
+        if field not in existing:
+            logging.info(f"{modelName}: adding missing field {field}")
+            invoke("modelFieldAdd", modelName=modelName, fieldName=field)
+
+
 def ensure_model(modelName: str, inOrderFields: list, cardTemplates: list):
     """Create the model if missing, otherwise update its CSS and templates
     so that SHARED_CSS / templates stay the source of truth for presentation."""
@@ -177,6 +191,7 @@ def ensure_model(modelName: str, inOrderFields: list, cardTemplates: list):
         return
 
     logging.info(f"{modelName} model exists, updating styling and templates...")
+    ensure_fields(modelName, inOrderFields)
     invoke("updateModelStyling", model={"name": modelName, "css": SHARED_CSS})
     templates = {t["Name"]: {"Front": t["Front"], "Back": t["Back"]} for t in cardTemplates}
     invoke("updateModelTemplates", model={"name": modelName, "templates": templates})
