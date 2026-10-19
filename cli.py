@@ -19,7 +19,7 @@ from anki.actions import (
 from models.models import Grammar, Sentence, Verb, Vocab
 from parsing.parser_grammar import parse_grammar
 from parsing.parser_sentence import parse_sentence
-from parsing.parser_verb import parse_verb
+from parsing.parser_verb import PRONOUNS, parse_verb
 import sys
 
 from parsing.parser_vocab import parse_vocab
@@ -94,6 +94,101 @@ def run_import(notes: Verb | Vocab | Sentence | Grammar, add_fn, deck, model, la
         logging.info(f"couldn't create note for {label_fn(error)}")
 
 
+# Required columns per note type. Everything not listed here is optional and may
+# stay empty: an empty cell often means "not applicable" (`bil` has no plural),
+# not "missing" — and an optional column is filled later by an in-place update,
+# which preserves the SRS. Only these must be present for a line to be imported:
+#   - the natural-key columns, or the note could never be matched back to Anki
+#     (and several keyless lines would collide on the same empty key);
+#   - the answer side, or there is nothing to review.
+REQUIRED_FIELDS: dict[type, tuple[str, ...]] = {
+    Verb: ("verb", "tense", "conjugation"),
+    Vocab: ("transliteration", "meaning"),
+    Sentence: ("topic", "order", "meaning"),
+    Grammar: ("rule", "explanation"),
+}
+
+# Which persons a verb must carry, per tense. The imperative only addresses the
+# listener, so it has no 1st/3rd person: requiring the 8 forms there would
+# reject every (correct) imperative line. Any other tense needs all 8.
+IMPERATIVE_PRONOUNS = ("enta", "ente", "ento")
+
+
+def expected_pronouns(tense: str) -> tuple[str, ...]:
+    """The pronouns a verb is expected to fill for this tense."""
+    if tense.strip().lower() == "imperative":
+        return IMPERATIVE_PRONOUNS
+    return tuple(PRONOUNS)
+
+
+def missing_pronouns(note: Verb) -> list[str]:
+    """Pronouns expected for this verb's tense that carry no form."""
+    return [
+        p
+        for p in expected_pronouns(note.tense)
+        if not note.conjugation.get(p, "").strip()
+    ]
+
+
+def missing_required_fields(note: Verb | Vocab | Sentence | Grammar) -> list[str]:
+    """Names of the required columns that are empty for this note.
+
+    A partially conjugated verb is NOT reported here: it still produces one
+    valid card per filled form, and blocking it would stop syncing a note that
+    already lives in Anki with its own review history. Only a verb with no form
+    at all is missing something required — it would create a note with zero
+    card. Partial conjugations are surfaced by missing_pronouns() as a warning."""
+    required = REQUIRED_FIELDS.get(type(note))
+    if required is None:
+        raise ValueError(f"Unknown note type: {type(note)}")
+
+    missing = []
+    for name in required:
+        value = getattr(note, name)
+        if isinstance(value, dict):
+            if not any(v.strip() for v in value.values()):
+                missing += list(expected_pronouns(getattr(note, "tense", "")))
+        elif not (value or "").strip():
+            missing.append(name)
+    return missing
+
+
+def split_valid(
+    notes: list[Verb | Vocab | Sentence | Grammar], label_fn
+) -> tuple[list, list]:
+    """Split notes into (importable, skipped) on their required columns.
+
+    Imported-but-incomplete notes are only warned about: they are still worth
+    syncing, and the missing forms can be added later by an in-place update."""
+    valid, skipped, partial = [], [], []
+    for note in notes:
+        missing = missing_required_fields(note)
+        if missing:
+            skipped.append((note, missing))
+            continue
+        valid.append(note)
+        if isinstance(note, Verb) and missing_pronouns(note):
+            partial.append((note, missing_pronouns(note)))
+
+    for note, missing in skipped:
+        logging.warning(
+            f"SKIP {label_fn(note)} — missing required column(s): {', '.join(missing)}"
+        )
+    for note, pronouns in partial:
+        logging.warning(
+            f"INCOMPLETE {label_fn(note)} — no form for: {', '.join(pronouns)} "
+            f"(imported anyway, {len(pronouns)} card(s) not generated)"
+        )
+    if skipped:
+        logging.warning(
+            f"{len(skipped)} line(s) skipped. "
+            f"Fill them in, or re-run with --force to import anyway."
+        )
+    if partial:
+        logging.warning(f"{len(partial)} line(s) imported with missing forms.")
+    return valid, skipped
+
+
 def run_dryrun(notes: Verb | Vocab | Sentence | Grammar, label_fn) -> int:
     """Print the plan and return the number of pending changes (create + update)."""
     to_create = 0
@@ -125,6 +220,11 @@ def main():
     )
     parser.add_argument("tsv", type=str, help="the tsv file")
     parser.add_argument("--apply", help="create cards", action="store_true")
+    parser.add_argument(
+        "--force",
+        help="import lines whose natural key is incomplete (not recommended)",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     target_file = Path(args.tsv)
@@ -157,7 +257,15 @@ def main():
         deck = DECK_NAME_GRAMMAR
         model = MODEL_NAME_GRAMMAR
 
-    nb_changes = run_dryrun(notes, label_dryrun)
+    nb_skipped = 0
+    if args.force:
+        valid = notes
+        logging.warning("--force: importing lines with an incomplete key too.")
+    else:
+        valid, skipped = split_valid(notes, label_run_error)
+        nb_skipped = len(skipped)
+
+    nb_changes = run_dryrun(valid, label_dryrun)
 
     if args.apply:
         # The model is source of truth for presentation, so it converges on every
@@ -168,9 +276,13 @@ def main():
 
         if nb_changes == 0:
             logging.info("Nothing to apply.")
-            return
+            # skipped lines are still an error: the file needs fixing
+            raise SystemExit(1 if nb_skipped else 0)
         reponse = input("Apply these changes? [y/N] ").strip().lower()
         if reponse in ("y", "yes", "o", "oui"):
             create_deck(deck)
-            run_import(notes, add_fn, deck, model, label_run_error)
+            run_import(valid, add_fn, deck, model, label_run_error)
 
+    # exit code != 0 if at least one line was rejected (spec 8.5)
+    if nb_skipped:
+        raise SystemExit(1)
