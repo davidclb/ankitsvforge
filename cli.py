@@ -24,11 +24,11 @@ import sys
 
 from parsing.parser_vocab import parse_vocab
 
-DECK_NAME_VERB = "LebaneseConjugator"
+DECK_NAME_VERB = "1 LebaneseConjugator"
 MODEL_NAME_VERB = "LebaneseConjugator"
 MODEL_NAME_VOCAB = "LebaneseVocab"
-DECK_NAME_VOCAB = "LebaneseVocab"
-DECK_NAME_SENTENCE = "LebaneseSentence"
+DECK_NAME_VOCAB = "13 LebaneseVocab"
+DECK_NAME_SENTENCE = "12 LebaneseSentence"
 MODEL_NAME_SENTENCE = "LebaneseSentence"
 DECK_NAME_GRAMMAR = "LebaneseGrammar"
 MODEL_NAME_GRAMMAR = "LebaneseGrammar"
@@ -123,35 +123,35 @@ def main():
         help="type of notes",
         choices=["verb", "vocab", "sentence", "grammar"],
     )
-    parser.add_argument("csv", type=str, help="the csv file")
+    parser.add_argument("tsv", type=str, help="the tsv file")
     parser.add_argument("--apply", help="create cards", action="store_true")
     args = parser.parse_args()
 
-    target_file = Path(args.csv)
+    target_file = Path(args.tsv)
     if not target_file.exists():
         print("The target file doesn't exist")
         raise SystemExit(1)
 
     if args.type == "verb":
-        notes = parse_verb(args.csv)
+        notes = parse_verb(args.tsv)
         add_fn = add_notes_verb
         create_model_fn = create_model_verb
         deck = DECK_NAME_VERB
         model = MODEL_NAME_VERB
     elif args.type == "vocab":
-        notes = parse_vocab(args.csv)
+        notes = parse_vocab(args.tsv)
         add_fn = add_notes_vocab
         create_model_fn = create_model_vocab
         deck = DECK_NAME_VOCAB
         model = MODEL_NAME_VOCAB
     elif args.type == "sentence":
-        notes = parse_sentence(args.csv)
+        notes = parse_sentence(args.tsv)
         add_fn = add_notes_sentence
         create_model_fn = create_model_sentence
         deck = DECK_NAME_SENTENCE
         model = MODEL_NAME_SENTENCE
     elif args.type == "grammar":
-        notes = parse_grammar(args.csv)
+        notes = parse_grammar(args.tsv)
         add_fn = add_notes_grammar
         create_model_fn = create_model_grammar
         deck = DECK_NAME_GRAMMAR
@@ -173,3 +173,4 @@ def main():
         if reponse in ("y", "yes", "o", "oui"):
             create_deck(deck)
             run_import(notes, add_fn, deck, model, label_run_error)
+

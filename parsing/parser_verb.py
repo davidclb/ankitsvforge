@@ -8,8 +8,8 @@ PRONOUNS = ["ana", "enta", "ente", "houwe", "hiye", "nehna", "ento", "henne"]
 
 def parse_verb(filepath: str | Path) -> list[Verb]:
     try:
-        with open(filepath, newline="") as csvfile:
-            reader = csv.DictReader(csvfile)
+        with open(filepath, newline="") as tsvfile:
+            reader = csv.DictReader(tsvfile, delimiter="\t")
             verbs = []
             for row in reader:
                 # Skip if the the line contains a time

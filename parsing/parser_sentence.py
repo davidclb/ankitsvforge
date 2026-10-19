@@ -6,8 +6,8 @@ from models.models import Sentence
 
 def parse_sentence(filepath: str | Path) -> list[Sentence]:
     try:
-        with open(filepath, newline="") as csvfile:
-            reader = csv.DictReader(csvfile)
+        with open(filepath, newline="") as tsvfile:
+            reader = csv.DictReader(tsvfile, delimiter="\t")
             sentences = []
             for row in reader:
                 # skip date separator lines (only 'topic' filled; rest empty or missing)
