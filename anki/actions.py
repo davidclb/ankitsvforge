@@ -25,6 +25,7 @@ INORDERFIELDS_VERB = [
     "Henne",
     "FormVariant",
     "Arabic",
+    "Ask",
 ]
 
 INORDERFIELDS_VOCAB = [
@@ -35,6 +36,7 @@ INORDERFIELDS_VOCAB = [
     "Feminine",
     "Plural",
     "Source",
+    "Ask",
 ]
 
 INORDERFIELDS_SENTENCE = [
@@ -45,6 +47,7 @@ INORDERFIELDS_SENTENCE = [
     "Meaning",
     "Arabic",
     "Source",
+    "Ask",
 ]
 
 INORDERFIELDS_GRAMMAR = [
@@ -53,6 +56,7 @@ INORDERFIELDS_GRAMMAR = [
     "Example",
     "Arabic",
     "Source",
+    "Ask",
 ]
 
 SHARED_CSS = (Path(__file__).parent / "card.css").read_text(encoding="utf-8")
@@ -139,10 +143,12 @@ def check_note(note: Verb | Vocab | Sentence | Grammar) -> bool:
 def make_template(pronom: str) -> dict:
     return {
         "Name": f"Card {pronom}",
-        "Front": f"""<div class="prompt">({{{{Meaning}}}})</div>
+        "Front": f"""{{{{#Ask}}}}<div class="ask-flag">?</div>{{{{/Ask}}}}
+            <div class="prompt">({{{{Meaning}}}})</div>
             <div class="tense">{pronom} — {{{{Tense}}}}</div>
             {{{{type:{pronom}}}}}""",
-        "Back": f"""<div class="prompt">({{{{Meaning}}}})</div>
+        "Back": f"""{{{{#Ask}}}}<div class="ask-flag">?</div>{{{{/Ask}}}}
+            <div class="prompt">({{{{Meaning}}}})</div>
             <div class="tense">{pronom} — {{{{Tense}}}}</div>
             {{{{type:{pronom}}}}}
             <hr id="answer">
@@ -150,7 +156,8 @@ def make_template(pronom: str) -> dict:
             {{{{#FormVariant}}}}
             <hr>
             <div class="forms">{{{{FormVariant}}}}</div>
-            {{{{/FormVariant}}}}""",
+            {{{{/FormVariant}}}}
+            {{{{#Ask}}}}<div class="ask">{{{{Ask}}}}</div>{{{{/Ask}}}}""",
     }
 
 
@@ -190,15 +197,18 @@ def create_model_vocab(modelName: str):
         [
             {
                 "Name": "Card VOCAB",
-                "Front": '<div class="prompt">{{Meaning}}</div>',
-                "Back": """<div class="prompt">{{Meaning}}</div>
+                "Front": """{{#Ask}}<div class="ask-flag">?</div>{{/Ask}}
+                <div class="prompt">{{Meaning}}</div>""",
+                "Back": """{{#Ask}}<div class="ask-flag">?</div>{{/Ask}}
+                <div class="prompt">{{Meaning}}</div>
                 <hr>
                 <div class="translit">{{Transliteration}}</div>
                 {{#Arabic}}<div class="arabic">{{Arabic}}</div>{{/Arabic}}
                 {{#Feminine}}<div class="forms">féminin : {{Feminine}}</div>{{/Feminine}}
                 {{#Dual}}<div class="forms">duel : {{Dual}}</div>{{/Dual}}
                 {{#Plural}}<div class="forms">pluriel : {{Plural}}</div>{{/Plural}}
-                {{#Source}}<div class="source">{{Source}}</div>{{/Source}}""",
+                {{#Source}}<div class="source">{{Source}}</div>{{/Source}}
+                {{#Ask}}<div class="ask">{{Ask}}</div>{{/Ask}}""",
             }
         ],
     )
@@ -211,14 +221,17 @@ def create_model_sentence(modelName: str):
         [
             {
                 "Name": "Card SENTENCE",
-                "Front": """{{#Type}}<div class="badge">{{Type}}</div>{{/Type}}
+                "Front": """{{#Ask}}<div class="ask-flag">?</div>{{/Ask}}
+{{#Type}}<div class="badge">{{Type}}</div>{{/Type}}
 <div class="sentence-tr">{{Meaning}}</div>""",
-                "Back": """{{#Type}}<div class="badge">{{Type}}</div>{{/Type}}
+                "Back": """{{#Ask}}<div class="ask-flag">?</div>{{/Ask}}
+{{#Type}}<div class="badge">{{Type}}</div>{{/Type}}
 <div class="sentence-tr">{{Meaning}}</div>
 <hr>
 <div class="sentence">{{Transliteration}}</div>
 {{#Arabic}}<div class="arabic">{{Arabic}}</div>{{/Arabic}}
-{{#Source}}<div class="source">{{Source}}</div>{{/Source}}""",
+{{#Source}}<div class="source">{{Source}}</div>{{/Source}}
+{{#Ask}}<div class="ask">{{Ask}}</div>{{/Ask}}""",
             }
         ],
     )
@@ -231,13 +244,16 @@ def create_model_grammar(modelName: str):
         [
             {
                 "Name": "Card GRAMMAR",
-                "Front": '<div class="rule">{{Rule}}</div>',
-                "Back": """<div class="rule">{{Rule}}</div>
+                "Front": """{{#Ask}}<div class="ask-flag">?</div>{{/Ask}}
+<div class="rule">{{Rule}}</div>""",
+                "Back": """{{#Ask}}<div class="ask-flag">?</div>{{/Ask}}
+<div class="rule">{{Rule}}</div>
 <hr>
 <div class="explanation">{{Explanation}}</div>
 {{#Example}}<div class="example">{{Example}}</div>{{/Example}}
 {{#Arabic}}<div class="arabic">{{Arabic}}</div>{{/Arabic}}
-{{#Source}}<div class="source">{{Source}}</div>{{/Source}}""",
+{{#Source}}<div class="source">{{Source}}</div>{{/Source}}
+{{#Ask}}<div class="ask">{{Ask}}</div>{{/Ask}}""",
             }
         ],
     )

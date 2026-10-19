@@ -167,3 +167,45 @@ hr, hr#answer {
   .translit { font-size: 26px; }
   .prompt, .rule { font-size: 20px; }
 }
+
+/* ── Ask: pending question for the teacher ──────────────────────────
+   Local-only field, never touched by the CLI sync. Terracotta so it
+   reads as a margin note, distinct from the green study content. */
+
+/* front: discreet marker only — never the text, it would leak the answer */
+.ask-flag {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #B0603C;
+  border: 1px solid rgba(176,96,60,.35);
+  background: #FBF0E8;
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-bottom: 12px;
+}
+
+/* back: the question itself */
+.ask {
+  font-size: 15px;
+  color: #8A4B2E;
+  line-height: 1.6;
+  text-align: left;
+  max-width: 60ch;
+  background: #FBF0E8;
+  border-left: 3px solid #B0603C;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-top: 14px;
+}
+.ask::before {
+  content: "à demander";
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #B0603C;
+  opacity: .75;
+  margin-bottom: 4px;
+}
